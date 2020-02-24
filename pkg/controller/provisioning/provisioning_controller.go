@@ -62,10 +62,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// FIXME: Deployment and Secret
-	// Watch for changes to secondary resource Pods and requeue the owner Provisioning
+	// Watch for changes to our Deployment and Secret and requeue the owner Provisioning
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &metal3v1alpha1.Provisioning{},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &metal3v1alpha1.Provisioning{},
 	})
