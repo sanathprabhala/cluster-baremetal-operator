@@ -1,0 +1,11 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cluster-baremetal-operator
+subjects:
+- kind: ServiceAccount
+  name: cluster-baremetal-operator
+roleRef:
+  kind: Role
+  name: cluster-baremetal-operator
+  apiGroup: rbac.authorization.k8s.io
