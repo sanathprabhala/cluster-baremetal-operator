@@ -9,7 +9,7 @@ spec:
     listKind: ProvisioningList
     plural: provisionings
     singular: provisioning
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:

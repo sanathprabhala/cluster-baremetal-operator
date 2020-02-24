@@ -17,7 +17,7 @@ import (
 // consumed by the cluster-baremetal-operator to bring up and update
 // containers in a metal3 cluster.
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=provisionings,scope=Namespaced
+// +kubebuilder:resource:path=provisionings,scope=Cluster
 type Provisioning struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
