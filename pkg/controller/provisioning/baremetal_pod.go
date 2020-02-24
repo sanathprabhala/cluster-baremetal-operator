@@ -1,15 +1,12 @@
-package operator
+package provisioning
 
 import (
 	"math/rand"
 	"time"
 
-	"github.com/golang/glog"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -89,25 +86,16 @@ func generateRandomPassword() string {
 	return (string(buf))
 }
 
-func createMariadbPasswordSecret(client coreclientv1.SecretsGetter, config *OperatorConfig) error {
-	glog.V(3).Info("Checking if the Maridb password secret already exists")
-	_, err := client.Secrets(config.TargetNamespace).Get(baremetalSecretName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		// Secret does not already exist. So, create one.
-		_, err := client.Secrets(config.TargetNamespace).Create(
-			&corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      baremetalSecretName,
-					Namespace: config.TargetNamespace,
-				},
-				StringData: map[string]string{
-					baremetalSecretKey: generateRandomPassword(),
-				},
-			},
-		)
-		return err
+func createMariadbPasswordSecret(config *OperatorConfig) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      baremetalSecretName,
+			Namespace: config.TargetNamespace,
+		},
+		StringData: map[string]string{
+			baremetalSecretKey: generateRandomPassword(),
+		},
 	}
-	return err
 }
 
 func newMetal3Deployment(config *OperatorConfig, baremetalProvisioningConfig BaremetalProvisioningConfig) *appsv1.Deployment {
@@ -118,9 +106,6 @@ func newMetal3Deployment(config *OperatorConfig, baremetalProvisioningConfig Bar
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "metal3",
 			Namespace: config.TargetNamespace,
-			Annotations: map[string]string{
-				maoOwnedAnnotation: "",
-			},
 			Labels: map[string]string{
 				"api":     "clusterapi",
 				"k8s-app": "controller",

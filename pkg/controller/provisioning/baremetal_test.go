@@ -1,29 +1,21 @@
-package operator
+package provisioning
 
 import (
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	fakedynamic "k8s.io/client-go/dynamic/fake"
-	fakekube "k8s.io/client-go/kubernetes/fake"
-	"sigs.k8s.io/yaml"
+	metal3v1alpha1 "github.com/openshift/cluster-baremetal-operator/pkg/apis/metal3/v1alpha1"
 )
 
-var yamlContent = `
-apiVersion: metal3.io/v1alpha1
-kind: Provisioning
-metadata:
-  name: test
-spec:
-  provisioningInterface: "ensp0"
-  provisioningIP: "172.30.20.3"
-  provisioningNetworkCIDR: "172.30.20.0/24"
-  provisioningDHCPExternal: false
-  provisioningDHCPRange: "172.30.20.11, 172.30.20.101"
-  provisioningOSDownloadURL: "http://172.22.0.1/images/rhcos-44.81.202001171431.0-openstack.x86_64.qcow2.gz?sha256=e98f83a2b9d4043719664a2be75fe8134dc6ca1fdbde807996622f8cc7ecd234"
-`
+var provisioningCR = &metal3v1alpha1.Provisioning{
+	Spec: metal3v1alpha1.ProvisioningSpec{
+		ProvisioningInterface:     "ensp0",
+		ProvisioningIP:            "172.30.20.3",
+		ProvisioningNetworkCIDR:   "172.30.20.0/24",
+		ProvisioningDHCPExternal:  false,
+		ProvisioningDHCPRange:     "172.30.20.11, 172.30.20.101",
+		ProvisioningOSDownloadURL: "http://172.22.0.1/images/rhcos-44.81.202001171431.0-openstack.x86_64.qcow2.gz?sha256=e98f83a2b9d4043719664a2be75fe8134dc6ca1fdbde807996622f8cc7ecd234",
+	},
+}
 var (
 	expectedProvisioningInterface    = "ensp0"
 	expectedProvisioningIP           = "172.30.20.3"
@@ -46,76 +38,30 @@ func TestGenerateRandomPassword(t *testing.T) {
 	}
 }
 
-func newOperatorWithBaremetalConfig() *OperatorConfig {
-	return &OperatorConfig{
-		targetNamespace,
-		Controllers{
-			"docker.io/openshift/origin-aws-machine-controllers:v4.0.0",
-			"docker.io/openshift/origin-machine-api-operator:v4.0.0",
-			"docker.io/openshift/origin-machine-api-operator:v4.0.0",
-		},
-		BaremetalControllers{
-			"quay.io/openshift/origin-baremetal-operator:v4.2.0",
-			"quay.io/openshift/origin-ironic:v4.2.0",
-			"quay.io/openshift/origin-ironic-inspector:v4.2.0",
-			"quay.io/openshift/origin-ironic-ipa-downloader:v4.2.0",
-			"quay.io/openshift/origin-ironic-machine-os-downloader:v4.2.0",
-			"quay.io/openshift/origin-ironic-static-ip-manager:v4.2.0",
-		},
-	}
-}
-
-//Testing the case where the password does already exist
+// Testing the mariadb password creation
 func TestCreateMariadbPasswordSecret(t *testing.T) {
-	kubeClient := fakekube.NewSimpleClientset(nil...)
-	operatorConfig := newOperatorWithBaremetalConfig()
-	client := kubeClient.CoreV1()
+	operatorConfig := &OperatorConfig{TargetNamespace: "test-namespace"}
 
 	// First create a mariadb password secret
-	if err := createMariadbPasswordSecret(kubeClient.CoreV1(), operatorConfig); err != nil {
-		t.Fatalf("Failed to create first Mariadb password. %s ", err)
-	}
-	// Read and get Mariadb password from Secret just created.
-	oldMaridbPassword, err := client.Secrets(operatorConfig.TargetNamespace).Get(baremetalSecretName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Failure getting the first Mariadb password that just got created.")
-	}
-	oldPassword, ok := oldMaridbPassword.StringData[baremetalSecretKey]
+	oldMariadbPassword := createMariadbPasswordSecret(operatorConfig)
+	oldPassword, ok := oldMariadbPassword.StringData[baremetalSecretKey]
 	if !ok || oldPassword == "" {
 		t.Fatal("Failure reading first Mariadb password from Secret.")
 	}
 
-	// The pasword definitely exists. Try creating again.
-	if err := createMariadbPasswordSecret(kubeClient.CoreV1(), operatorConfig); err != nil {
-		t.Fatal("Failure creating second Mariadb password.")
-	}
-	newMaridbPassword, err := client.Secrets(operatorConfig.TargetNamespace).Get(baremetalSecretName, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal("Failure getting the second Mariadb password.")
-	}
-	newPassword, ok := newMaridbPassword.StringData[baremetalSecretKey]
+	// Create another mariadb password secret
+	newMariadbPassword := createMariadbPasswordSecret(operatorConfig)
+	newPassword, ok := newMariadbPassword.StringData[baremetalSecretKey]
 	if !ok || newPassword == "" {
 		t.Fatal("Failure reading second Mariadb password from Secret.")
 	}
-	if oldPassword != newPassword {
-		t.Fatalf("Both passwords do not match.")
-	} else {
-		t.Logf("First Mariadb password is being preserved over re-creation as expected.")
+	if oldPassword == newPassword {
+		t.Fatalf("Both passwords match.")
 	}
 }
 
 func TestGetBaremetalProvisioningConfig(t *testing.T) {
-	testConfigResource := "test"
-	u := &unstructured.Unstructured{Object: map[string]interface{}{}}
-	if err := yaml.Unmarshal([]byte(yamlContent), &u); err != nil {
-		t.Errorf("failed to unmarshall input yaml content:%v", err)
-	}
-	dynamicClient := fakedynamic.NewSimpleDynamicClient(runtime.NewScheme(), u)
-	baremetalConfig, err := getBaremetalProvisioningConfig(dynamicClient, testConfigResource)
-	if err != nil {
-		t.Logf("Unstructed Config:  %+v", u)
-		t.Fatalf("Failed to get Baremetal Provisioning Interface from CR %s", testConfigResource)
-	}
+	baremetalConfig := getBaremetalProvisioningConfig(provisioningCR)
 	if baremetalConfig.ProvisioningInterface != expectedProvisioningInterface ||
 		baremetalConfig.ProvisioningIp != expectedProvisioningIP ||
 		baremetalConfig.ProvisioningNetworkCIDR != expectedProvisioningNetworkCIDR ||
@@ -126,34 +72,9 @@ func TestGetBaremetalProvisioningConfig(t *testing.T) {
 	}
 }
 
-func TestGetIncorrectBaremetalProvisioningCR(t *testing.T) {
-	incorrectConfigResource := "test1"
-	u := &unstructured.Unstructured{Object: map[string]interface{}{}}
-	if err := yaml.Unmarshal([]byte(yamlContent), &u); err != nil {
-		t.Errorf("failed to unmarshall input yaml content:%v", err)
-	}
-	dynamicClient := fakedynamic.NewSimpleDynamicClient(runtime.NewScheme(), u)
-	baremetalConfig, err := getBaremetalProvisioningConfig(dynamicClient, incorrectConfigResource)
-	if err != nil {
-		t.Logf("Unable to get Baremetal Provisioning Config from CR %s as expected", incorrectConfigResource)
-	}
-	if baremetalConfig.ProvisioningInterface != "" {
-		t.Errorf("BaremetalProvisioningConfig is not expected to be set.")
-	}
-}
-
 func TestGetMetal3DeploymentConfig(t *testing.T) {
-	testConfigResource := "test"
-	u := &unstructured.Unstructured{Object: map[string]interface{}{}}
-	if err := yaml.Unmarshal([]byte(yamlContent), &u); err != nil {
-		t.Errorf("failed to unmarshall input yaml content:%v", err)
-	}
-	dynamicClient := fakedynamic.NewSimpleDynamicClient(runtime.NewScheme(), u)
-	baremetalConfig, err := getBaremetalProvisioningConfig(dynamicClient, testConfigResource)
-	if err != nil {
-		t.Logf("Unstructed Config:  %+v", u)
-		t.Errorf("Failed to get Baremetal Provisioning Config from CR %s", testConfigResource)
-	}
+	baremetalConfig := getBaremetalProvisioningConfig(provisioningCR)
+
 	actualCacheURL := getMetal3DeploymentConfig("CACHEURL", baremetalConfig)
 	if actualCacheURL != nil {
 		t.Errorf("CacheURL is found to be %s. CACHEURL is not expected.", *actualCacheURL)
