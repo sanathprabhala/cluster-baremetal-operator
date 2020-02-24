@@ -98,7 +98,11 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Provisioning")
 
-	// FIXME: check that it's the singleton instance (i.e. baremetalProvisioningCR)
+	// provisioning.metal3.io is a singleton
+	if request.Name != baremetalProvisioningCR {
+		reqLogger.Info("Ignoring Provisioning.metal3.io without default name")
+		return reconcile.Result{}, nil
+	}
 
 	// Fetch the Provisioning instance
 	instance := &metal3v1alpha1.Provisioning{}
