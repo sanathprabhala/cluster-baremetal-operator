@@ -22,6 +22,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_provisioning")
+var componentNamespace = "openshift-baremetal"
 
 // OperatorConfig contains configuration for the metal3 Deployment
 type OperatorConfig struct {
@@ -121,7 +122,7 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	config := &OperatorConfig{
-		TargetNamespace: request.Namespace,
+		TargetNamespace: componentNamespace,
 		BaremetalControllers: BaremetalControllers{
 			BaremetalOperator:         os.Getenv("BAREMETAL_IMAGE"),
 			Ironic:                    os.Getenv("IRONIC_IMAGE"),
