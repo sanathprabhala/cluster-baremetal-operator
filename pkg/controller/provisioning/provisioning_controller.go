@@ -171,14 +171,17 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-
-		// Deployment created successfully - don't requeue
-		return reconcile.Result{}, nil
 	} else if err != nil {
+		return reconcile.Result{}, err
+	} else {
+		reqLogger.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+	}
+
+	err = syncClusterOperator(r.client, r.config.TargetNamespace, os.Getenv("OPERATOR_VERSION"), true)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Deployment already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+	// Success; don't requeue
 	return reconcile.Result{}, nil
 }
