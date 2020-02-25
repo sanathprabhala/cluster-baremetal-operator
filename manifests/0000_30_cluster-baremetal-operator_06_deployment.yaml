@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-baremetal-operator
+  namespace: openshift-baremetal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: cluster-baremetal-operator
+  template:
+    metadata:
+      labels:
+        name: cluster-baremetal-operator
+    spec:
+      serviceAccountName: cluster-baremetal-operator
+      containers:
+        - name: cluster-baremetal-operator
+          image: registry.svc.ci.openshift.org/openshift:cluster-baremetal-operator
+          command:
+          - cluster-baremetal-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "cluster-baremetal-operator"
+            - name: OPERATOR_VERSION
+              value: "0.0.1-snapshot"
+            - name: BAREMETAL_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:baremetal-operator"
+            - name: IRONIC_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:ironic"
+            - name: IRONIC_INSPECTOR_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:ironic-inspector"
+            - name: IRONIC_IPA_DOWNLOADER_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:ironic-ipa-downloader"
+            - name: IRONIC_MACHINE_OS_DOWNLOADER_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:ironic-machine-os-downloader"
+            - name: IRONIC_STATIC_IP_MANAGER_IMAGE
+              value: "registry.svc.ci.openshift.org/openshift:ironic-static-ip-manager"
