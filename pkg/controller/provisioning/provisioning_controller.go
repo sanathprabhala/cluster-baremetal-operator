@@ -2,6 +2,7 @@ package provisioning
 
 import (
 	"context"
+	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -121,7 +122,14 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 
 	config := &OperatorConfig{
 		TargetNamespace: request.Namespace,
-		// FIXME: add images
+		BaremetalControllers: BaremetalControllers{
+			BaremetalOperator:         os.Getenv("BAREMETAL_IMAGE"),
+			Ironic:                    os.Getenv("IRONIC_IMAGE"),
+			IronicInspector:           os.Getenv("IRONIC_INSPECTOR_IMAGE"),
+			IronicIpaDownloader:       os.Getenv("IRONIC_IPA_DOWNLOADER_IMAGE"),
+			IronicMachineOsDownloader: os.Getenv("IRONIC_MACHINE_OS_DOWNLOADER_IMAGE"),
+			IronicStaticIpManager:     os.Getenv("IRONIC_STATIC_IP_MANAGER_IMAGE"),
+		},
 	}
 
 	// Create a Secret needed for the Metal3 deployment
