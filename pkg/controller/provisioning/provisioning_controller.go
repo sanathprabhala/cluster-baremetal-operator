@@ -47,7 +47,22 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileProvisioning{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileProvisioning{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: &OperatorConfig{
+			TargetNamespace: componentNamespace,
+			BaremetalControllers: BaremetalControllers{
+				BaremetalOperator:         os.Getenv("BAREMETAL_IMAGE"),
+				Ironic:                    os.Getenv("IRONIC_IMAGE"),
+				IronicInspector:           os.Getenv("IRONIC_INSPECTOR_IMAGE"),
+				IronicIpaDownloader:       os.Getenv("IRONIC_IPA_DOWNLOADER_IMAGE"),
+				IronicMachineOsDownloader: os.Getenv("IRONIC_MACHINE_OS_DOWNLOADER_IMAGE"),
+				IronicStaticIpManager:     os.Getenv("IRONIC_STATIC_IP_MANAGER_IMAGE"),
+			},
+		},
+	}
+
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -93,6 +108,7 @@ type ReconcileProvisioning struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *OperatorConfig
 }
 
 // Reconcile reads that state of the cluster for a Provisioning object and makes changes based on the state read
@@ -121,20 +137,8 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	config := &OperatorConfig{
-		TargetNamespace: componentNamespace,
-		BaremetalControllers: BaremetalControllers{
-			BaremetalOperator:         os.Getenv("BAREMETAL_IMAGE"),
-			Ironic:                    os.Getenv("IRONIC_IMAGE"),
-			IronicInspector:           os.Getenv("IRONIC_INSPECTOR_IMAGE"),
-			IronicIpaDownloader:       os.Getenv("IRONIC_IPA_DOWNLOADER_IMAGE"),
-			IronicMachineOsDownloader: os.Getenv("IRONIC_MACHINE_OS_DOWNLOADER_IMAGE"),
-			IronicStaticIpManager:     os.Getenv("IRONIC_STATIC_IP_MANAGER_IMAGE"),
-		},
-	}
-
 	// Create a Secret needed for the Metal3 deployment
-	secret := createMariadbPasswordSecret(config)
+	secret := createMariadbPasswordSecret(r.config)
 	if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -153,7 +157,7 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Define a new Deployment object
-	deployment := newMetal3Deployment(config, getBaremetalProvisioningConfig(instance))
+	deployment := newMetal3Deployment(r.config, getBaremetalProvisioningConfig(instance))
 	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
