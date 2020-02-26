@@ -39,7 +39,7 @@ generate: gen-crd update-codegen
 
 .PHONY: gen-crd
 gen-crd:
-	operator-sdk generate crd
+	operator-sdk generate crds
 
 .PHONY: update-codegen
 update-codegen:
