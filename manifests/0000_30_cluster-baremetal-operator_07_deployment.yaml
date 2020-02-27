@@ -13,13 +13,17 @@ spec:
       labels:
         name: cluster-baremetal-operator
     spec:
+      priorityClassName: system-node-critical
       serviceAccountName: cluster-baremetal-operator
       containers:
         - name: cluster-baremetal-operator
           image: registry.svc.ci.openshift.org/openshift:cluster-baremetal-operator
           command:
           - cluster-baremetal-operator
-          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 10m
+              memory: 50Mi
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -43,3 +47,21 @@ spec:
               value: "registry.svc.ci.openshift.org/openshift:ironic-machine-os-downloader"
             - name: IRONIC_STATIC_IP_MANAGER_IMAGE
               value: "registry.svc.ci.openshift.org/openshift:ironic-static-ip-manager"
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 120
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 120
