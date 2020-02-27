@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func syncClusterOperator(c client.Client, targetNamespace string, version string, done bool) error {
+func syncClusterOperator(c client.Client, targetNamespace string, version string, done, disabled bool) error {
 	name := types.NamespacedName{Name: "baremetal"}
 
 	co := &configv1.ClusterOperator{}
@@ -47,7 +47,7 @@ func syncClusterOperator(c client.Client, targetNamespace string, version string
 	}
 
 	prevConditions := co.Status.Conditions
-	co.Status.Conditions = updateConditions(prevConditions, done)
+	co.Status.Conditions = updateConditions(prevConditions, done, disabled)
 
 	operatorv1helpers.SetOperandVersion(&co.Status.Versions, configv1.OperandVersion{Name: "operator", Version: version})
 
@@ -63,7 +63,10 @@ func syncClusterOperator(c client.Client, targetNamespace string, version string
 	return nil
 }
 
-func updateConditions(conditions []configv1.ClusterOperatorStatusCondition, done bool) []configv1.ClusterOperatorStatusCondition {
+// OperatorDisabled reports when the primary function of the operator has been disabled.
+const OperatorDisabled configv1.ClusterStatusConditionType = "Disabled"
+
+func updateConditions(conditions []configv1.ClusterOperatorStatusCondition, done, disabled bool) []configv1.ClusterOperatorStatusCondition {
 	// FIXME: actually implement the expected semantics of these conditions
 	conditions = []configv1.ClusterOperatorStatusCondition{
 		{
@@ -75,12 +78,18 @@ func updateConditions(conditions []configv1.ClusterOperatorStatusCondition, done
 		}, {
 			Type:   configv1.OperatorDegraded,
 			Status: configv1.ConditionFalse,
+		}, {
+			Type:   OperatorDisabled,
+			Status: configv1.ConditionFalse,
 		},
 	}
 	if done {
 		conditions[0].Status = configv1.ConditionTrue
 	} else {
 		conditions[1].Status = configv1.ConditionTrue
+	}
+	if disabled {
+		conditions[3].Status = configv1.ConditionTrue
 	}
 	return conditions
 }

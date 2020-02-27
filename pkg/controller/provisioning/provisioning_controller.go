@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	osconfigv1 "github.com/openshift/api/config/v1"
 	metal3v1alpha1 "github.com/openshift/cluster-baremetal-operator/pkg/apis/metal3/v1alpha1"
 )
 
@@ -123,9 +124,25 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, nil
 	}
 
+	infra := &osconfigv1.Infrastructure{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "cluster"}, infra)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Disable ourselves on platforms other than bare metal
+	if infra.Status.Platform != osconfigv1.BareMetalPlatformType {
+		err = syncClusterOperator(r.client, r.config.TargetNamespace, os.Getenv("OPERATOR_VERSION"), true, true)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		// We're disabled; don't requeue
+		return reconcile.Result{}, nil
+	}
+
 	// Fetch the Provisioning instance
 	instance := &metal3v1alpha1.Provisioning{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -177,7 +194,7 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 		reqLogger.Info("Skip reconcile: Deployment already exists", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 	}
 
-	err = syncClusterOperator(r.client, r.config.TargetNamespace, os.Getenv("OPERATOR_VERSION"), true)
+	err = syncClusterOperator(r.client, r.config.TargetNamespace, os.Getenv("OPERATOR_VERSION"), true, false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
