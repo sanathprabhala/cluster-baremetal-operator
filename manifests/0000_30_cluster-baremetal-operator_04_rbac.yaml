@@ -97,3 +97,68 @@ subjects:
 - kind: ServiceAccount
   namespace: openshift-baremetal
   name: cluster-baremetal-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: openshift-baremetal
+  name: baremetal-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: openshift-baremetal
+  name: baremetal-controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - watch
+      - list
+      - patch
+  - apiGroups:
+      - metal3.io
+    resources:
+      - baremetalhosts
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - metal3.io
+    resources:
+      - baremetalhosts/status
+      - baremetalhosts/finalizers
+    verbs:
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: openshift-baremetal
+  name: baremetal-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: baremetal-controller
+subjects:
+  - kind: ServiceAccount
+    namespace: openshift-baremetal
+    name: baremetal-controller
