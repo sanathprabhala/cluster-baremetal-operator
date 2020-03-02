@@ -167,7 +167,7 @@ func newMetal3PodTemplateSpec(config *OperatorConfig, baremetalProvisioningConfi
 			SecurityContext: &corev1.PodSecurityContext{
 				RunAsNonRoot: pointer.BoolPtr(false),
 			},
-			ServiceAccountName: "machine-api-controllers",
+			ServiceAccountName: "cluster-baremetal-operator",
 			Tolerations:        tolerations,
 		},
 	}
