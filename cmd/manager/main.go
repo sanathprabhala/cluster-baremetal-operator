@@ -12,6 +12,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
+	osconfigv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-baremetal-operator/pkg/apis"
 	"github.com/openshift/cluster-baremetal-operator/pkg/controller"
 	"github.com/openshift/cluster-baremetal-operator/version"
@@ -104,6 +105,10 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	if err := osconfigv1.Install(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
