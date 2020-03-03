@@ -23,7 +23,7 @@ import (
 )
 
 var log = logf.Log.WithName("controller_provisioning")
-var componentNamespace = "openshift-baremetal"
+var componentNamespace = "openshift-machine-api"
 
 // OperatorConfig contains configuration for the metal3 Deployment
 type OperatorConfig struct {

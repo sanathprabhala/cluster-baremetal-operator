@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cluster-baremetal-operator
-  namespace: openshift-baremetal
+  namespace: openshift-machine-api
 spec:
   replicas: 1
   selector:
