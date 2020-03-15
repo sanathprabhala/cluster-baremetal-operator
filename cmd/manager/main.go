@@ -135,7 +135,7 @@ func main() {
 // the Prometheus operator
 func addMetrics(ctx context.Context, cfg *rest.Config, namespace string) {
 	if err := serveCRMetrics(cfg); err != nil {
-		if errors.Is(err, k8sutil.ErrRunLocal) {
+		if errors.Is(err, k8sutil.ErrRunLocal) || errors.Is(err, k8sutil.ErrNoNamespace) {
 			log.Info("Skipping CR metrics server creation; not running in a cluster.")
 			return
 		}
