@@ -35,7 +35,7 @@ export IRONIC_STATIC_IP_MANAGER_IMAGE=$(get_image baremetalStaticIpManager)
 # Get the current release version from the CVO status
 export OPERATOR_VERSION=$(oc get clusterversion/version -o json | jq -r .status.desired.version)
 
-export WATCH_NAMESPACE=""
+export WATCH_NAMESPACE="openshift-machine-api"
 export POD_NAME="cluster-baremetal-operator"
 export OPERATOR_NAME="cluster-baremetal-operator"
 
