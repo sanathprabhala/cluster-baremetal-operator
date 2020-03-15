@@ -23,16 +23,11 @@ rules:
       - patch
       - delete
   - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - create
-  - apiGroups:
     - ""
     resources:
     - configmaps
+    - pods
+    - secrets
     verbs:
     - create
     - delete
