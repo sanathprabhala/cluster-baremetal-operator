@@ -187,7 +187,7 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 	if err != nil {
 		return reconcile.Result{}, err
 	} else if updated {
-		reqLogger.Info("Creating or updated Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
+		reqLogger.Info("Successfully created or updated Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 	} else {
 		reqLogger.Info("Skip reconcile: Deployment already up to date", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 	}
