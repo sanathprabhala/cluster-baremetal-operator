@@ -235,7 +235,9 @@ func newMetal3Containers(config *OperatorConfig, baremetalProvisioningConfig Bar
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          "metrics",
+					Protocol:      "TCP",
 					ContainerPort: 60000,
+					HostPort:      60000,
 				},
 			},
 			Command:         []string{"/baremetal-operator"},
@@ -245,7 +247,8 @@ func newMetal3Containers(config *OperatorConfig, baremetalProvisioningConfig Bar
 					Name: "WATCH_NAMESPACE",
 					ValueFrom: &corev1.EnvVarSource{
 						FieldRef: &corev1.ObjectFieldSelector{
-							FieldPath: "metadata.namespace",
+							APIVersion: "v1",
+							FieldPath:  "metadata.namespace",
 						},
 					},
 				},
@@ -253,7 +256,8 @@ func newMetal3Containers(config *OperatorConfig, baremetalProvisioningConfig Bar
 					Name: "POD_NAME",
 					ValueFrom: &corev1.EnvVarSource{
 						FieldRef: &corev1.ObjectFieldSelector{
-							FieldPath: "metadata.name",
+							APIVersion: "v1",
+							FieldPath:  "metadata.name",
 						},
 					},
 				},
