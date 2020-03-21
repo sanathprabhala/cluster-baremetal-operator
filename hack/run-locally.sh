@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Assuming a running bare metal cluster, ensure the MAO and metal3
-# deployments are scaled down before running the CBO with the required
-# env vars set
+# Assuming a running bare metal cluster, ensure the MAO deployment
+# is scaled down before running the CBO with the required env vars set
 
 set -x
 set -o errexit
@@ -14,9 +13,6 @@ oc patch clusterversion version --namespace openshift-cluster-version --type mer
 
 # Scale down the MAO deployment
 oc scale -n openshift-machine-api --replicas=0 deployment/machine-api-operator
-
-# Scale down the metal3 deployment
-oc -n openshift-machine-api scale --replicas=0 deployment/metal3
 
 # Fetch image pull specs from the MAO images config map
 function get_image() {
