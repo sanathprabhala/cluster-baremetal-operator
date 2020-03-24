@@ -11,19 +11,19 @@ metadata:
   name: cluster-baremetal-operator
 rules:
   - apiGroups:
-    - ""
+      - ""
     resources:
-    - configmaps
-    - pods
-    - secrets
+      - configmaps
+      - pods
+      - secrets
     verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
   - apiGroups:
       - apps
     resources:
