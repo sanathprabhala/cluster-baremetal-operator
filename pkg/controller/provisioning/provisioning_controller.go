@@ -12,7 +12,6 @@ import (
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -159,15 +158,11 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Create a Secret needed for the Metal3 deployment
-	secret := createMariadbPasswordSecret(r.config)
-	if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	foundSecret := &corev1.Secret{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, foundSecret)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: baremetalSecretName, Namespace: r.config.TargetNamespace}, foundSecret)
 	if err != nil && errors.IsNotFound(err) {
 		// Secret does not already exist. So, create one.
+		secret := createMariadbPasswordSecret(r.config)
 		reqLogger.Info("Creating a new Maridb password secret", "Secret.Namespace", secret.Namespace, "Deployment.Name", secret.Name)
 		err := r.client.Create(context.TODO(), secret)
 		if err != nil {
@@ -179,10 +174,6 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 
 	// Define a new Deployment object
 	deployment := newMetal3Deployment(r.config, getBaremetalProvisioningConfig(instance))
-	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	_, updated, err := resourceapply.ApplyDeployment(r.appsClient, deployment)
 	if err != nil {
 		return reconcile.Result{}, err
