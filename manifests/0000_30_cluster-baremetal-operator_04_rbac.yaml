@@ -39,6 +39,14 @@ rules:
       - patch
       - delete
   - apiGroups:
+      - ""
+    resources:
+      - services/finalizers
+    resourceNames:
+      - cluster-baremetal-operator-metrics
+    verbs:
+      - update
+  - apiGroups:
       - apps
     resources:
       - deployments/finalizers
@@ -46,6 +54,13 @@ rules:
       - cluster-baremetal-operator
     verbs:
       - update
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
