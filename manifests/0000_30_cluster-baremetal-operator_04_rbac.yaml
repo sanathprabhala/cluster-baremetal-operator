@@ -16,6 +16,7 @@ rules:
       - configmaps
       - pods
       - secrets
+      - services
     verbs:
       - create
       - delete
