@@ -19,12 +19,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	osconfigv1 "github.com/openshift/api/config/v1"
+	osoperatorv1 "github.com/openshift/api/operator/v1"
 	metal3v1alpha1 "github.com/openshift/cluster-baremetal-operator/pkg/apis/metal3/v1alpha1"
-	"github.com/openshift/cluster-version-operator/lib/resourceapply"
+	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
+	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 )
 
 var log = logf.Log.WithName("controller_provisioning")
 var componentNamespace = "openshift-machine-api"
+var componentName = "cluster-baremetal-operator"
 
 // OperatorConfig contains configuration for the metal3 Deployment
 type OperatorConfig struct {
@@ -113,6 +117,11 @@ type ReconcileProvisioning struct {
 	appsClient *appsclientv1.AppsV1Client
 	scheme     *runtime.Scheme
 	config     *OperatorConfig
+
+	// Track latest generation of our resources in memory, which means
+	// we will re-apply on restart of the operator.
+	// TODO: persist these to CR using operator.openshift.io OperatorStatus
+	generations []osoperatorv1.GenerationStatus
 }
 
 // Reconcile reads that state of the cluster for a Provisioning object and makes changes based on the state read
@@ -174,11 +183,13 @@ func (r *ReconcileProvisioning) Reconcile(request reconcile.Request) (reconcile.
 
 	// Define a new Deployment object
 	deployment := newMetal3Deployment(r.config, getBaremetalProvisioningConfig(instance))
-	_, updated, err := resourceapply.ApplyDeployment(r.appsClient, deployment)
+	expectedGeneration := resourcemerge.ExpectedDeploymentGeneration(deployment, r.generations)
+	_, updated, err := resourceapply.ApplyDeployment(r.appsClient, events.NewLoggingEventRecorder(componentName), deployment, expectedGeneration, false)
 	if err != nil {
 		return reconcile.Result{}, err
 	} else if updated {
 		reqLogger.Info("Successfully created or updated Deployment", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
+		resourcemerge.SetDeploymentGeneration(&r.generations, deployment)
 	} else {
 		reqLogger.Info("Skip reconcile: Deployment already up to date", "Deployment.Namespace", deployment.Namespace, "Deployment.Name", deployment.Name)
 	}
